@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>论坛 - 万里国贸之家</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                <h1>万里国贸之家</h1>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">主页</a></li>
+                <li><a href="requirements.html">专业需求</a></li>
+                <li><a href="forum.html" class="active">论坛</a></li>
+            </ul>
+            <div class="menu-toggle">
+                <i class="fas fa-bars"></i>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 论坛内容 -->
+    <section class="forum-section">
+        <div class="container">
+            <div class="section-title">
+                <h2>国贸论坛</h2>
+                <div class="line"></div>
+            </div>
+            
+            <div class="forum-content">
+                <!-- 留言表单 -->
+                <div class="forum-form">
+                    <h3><i class="fas fa-comment-alt"></i> 留下您的意见</h3>
+                    <form id="contact-form">
+                        <div class="form-group">
+                            <label for="name">姓名</label>
+                            <input type="text" id="name" name="name" placeholder="请输入您的姓名">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">邮箱</label>
+                            <input type="email" id="email" name="email" placeholder="请输入您的邮箱地址">
+                        </div>
+                        <div class="form-group">
+                            <label for="message">留言内容</label>
+                            <textarea id="message" name="message" placeholder="请输入您的留言内容..."></textarea>
+                        </div>
+                        <button type="submit" class="btn-submit">提交留言</button>
+                        <div class="placeholder-notice">
+                            <i class="fas fa-info-circle"></i> 网站正在建设中，完整的论坛功能将在配置服务器后实现
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 留言展示 -->
+                <div class="forum-messages">
+                    <h3><i class="fas fa-comments"></i> 留言板</h3>
+                    
+                    <!-- 示例留言 -->
+                    <div class="message-item">
+                        <div class="message-header">
+                            <span class="message-author">张三 - 国贸2101班</span>
+                            <span class="message-date">2023-05-20</span>
+                        </div>
+                        <div class="message-content">
+                            希望专业能多组织一些实践活动，比如企业参观、行业讲座等，这样可以帮助我们更好地了解实际工作环境和行业需求。
+                        </div>
+                    </div>
+                    
+                    <div class="message-item">
+                        <div class="message-header">
+                            <span class="message-author">李四 - 国贸2102班</span>
+                            <span class="message-date">2023-05-18</span>
+                        </div>
+                        <div class="message-content">
+                            请问专业需求页面中的一些证书考试时间和报名方式在哪里可以查询到？有没有相关的备考资料可以分享？
+                        </div>
+                    </div>
+                    
+                    <div class="message-item">
+                        <div class="message-header">
+                            <span class="message-author">王五 - 国贸2001班</span>
+                            <span class="message-date">2023-05-15</span>
+                        </div>
+                        <div class="message-content">
+                            作为学长，建议学弟学妹们尽早确定自己的职业规划，并根据规划有针对性地学习和考取相关证书，这对以后的就业会有很大帮助。
+                        </div>
+                    </div>
+                    
+                    <div class="message-item">
+                        <div class="message-header">
+                            <span class="message-author">赵六 - 国贸2002班</span>
+                            <span class="message-date">2023-05-10</span>
+                        </div>
+                        <div class="message-content">
+                            希望学院能提供更多的实习机会和就业指导，帮助我们更好地完成从学生到职场人的转变。
+                        </div>
+                    </div>
+                    
+                    <div class="message-item">
+                        <div class="message-header">
+                            <span class="message-author">钱七 - 国贸1901班</span>
+                            <span class="message-date">2023-05-05</span>
+                        </div>
+                        <div class="message-content">
+                            已经毕业一年了，感谢母校和老师们的培养。建议在校的同学们珍惜大学时光，多学习、多实践、多交流，为未来的发展打下坚实的基础。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-info">
+                    <h3>万里国贸之家</h3>
+                    <p>浙江万里学院国际经济与贸易专业官方网站</p>
+                </div>
+                <div class="footer-contact">
+                    <h4>联系我们</h4>
+                    <p><i class="fas fa-map-marker-alt"></i> 浙江省宁波市鄞州区钱湖南路8号</p>
+                    <p><i class="fas fa-phone"></i> 0574-88222222</p>
+                    <p><i class="fas fa-envelope"></i> trade@zwu.edu.cn</p>
+                </div>
+                <div class="footer-social">
+                    <h4>关注我们</h4>
+                    <a href="#"><i class="fab fa-weixin"></i></a>
+                    <a href="#"><i class="fab fa-weibo"></i></a>
+                    <a href="#"><i class="fab fa-qq"></i></a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 浙江万里学院国际经济与贸易专业. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
