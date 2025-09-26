@@ -43,6 +43,75 @@
     }, false);
 })();
 
+// 创建QQ二维码弹窗函数 - 移到全局作用域
+window.showQQImage = function() {
+    // 检查是否已存在QQ模态框
+    let modal = document.getElementById('qq-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        return;
+    }
+    
+    // 创建新的QQ模态框
+    modal = document.createElement('div');
+    modal.id = 'qq-modal';
+    modal.className = 'detail-modal';
+    modal.style.display = 'flex';
+    
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+    modalContent.style.maxWidth = '300px';
+    
+    const modalHeader = document.createElement('div');
+    modalHeader.className = 'modal-header';
+    
+    const modalTitle = document.createElement('h3');
+    modalTitle.className = 'modal-title';
+    modalTitle.textContent = 'QQ二维码';
+    
+    const closeBtn = document.createElement('span');
+    closeBtn.className = 'close-modal';
+    closeBtn.innerHTML = '&times;';
+    
+    const modalBody = document.createElement('div');
+    modalBody.className = 'modal-body';
+    modalBody.style.textAlign = 'center';
+    
+    const qqImage = document.createElement('img');
+    qqImage.src = 'images/QQ.png';
+    qqImage.alt = 'QQ二维码';
+    qqImage.style.maxWidth = '100%';
+    qqImage.style.height = 'auto';
+    
+    modalHeader.appendChild(modalTitle);
+    modalHeader.appendChild(closeBtn);
+    modalBody.appendChild(qqImage);
+    modalContent.appendChild(modalHeader);
+    modalContent.appendChild(modalBody);
+    modal.appendChild(modalContent);
+    
+    document.body.appendChild(modal);
+    
+    // 点击关闭按钮关闭模态框
+    closeBtn.addEventListener('click', function() {
+        modal.style.display = 'none';
+    });
+    
+    // 点击模态框外部关闭模态框
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+    
+    // 按ESC键关闭模态框
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.style.display === 'flex') {
+            modal.style.display = 'none';
+        }
+    });
+};
+
 // DOM元素加载完成后执行
 document.addEventListener('DOMContentLoaded', function() {
     // 创建微信二维码弹窗
@@ -147,13 +216,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // 论坛留言的本地存储功能 - 初始化
     const initializeForum = function() {
         // 配置项
-        const config = {
+        window.forumConfig = {
             maxMessages: 50, // 最多保存的留言数量
             messagesPerPage: 5 // 每页显示的留言数量
         };
         
         // 当前页码
-        let currentPage = 1;
+        window.forumCurrentPage = 1;
         
         // 加载存储的留言
         const loadMessages = function() {
@@ -237,43 +306,39 @@ document.addEventListener('DOMContentLoaded', function() {
             const messageHeader = document.createElement('div');
             messageHeader.className = 'message-header';
             
+            // 格式化显示名称为：姓名 - 班级
+            const displayName = message.name || (message.userName && message.className ? 
+                `${message.userName} - ${message.className}` : 
+                message.userName || '匿名用户');
+            
+            // 确保专业信息正确显示
+            const majorInfo = message.major ? `专业：${message.major}` : '';
+            
+            // 构建作者和日期信息
             const authorSpan = document.createElement('span');
             authorSpan.className = 'message-author';
-            authorSpan.textContent = message.name;
+            authorSpan.textContent = displayName;
             
             const dateSpan = document.createElement('span');
             dateSpan.className = 'message-date';
-            dateSpan.textContent = formatDateTime(message.timestamp);
+            dateSpan.textContent = formatDateTime(message.timestamp || message.createTime);
             
+            // 构建留言内容
             const messageContent = document.createElement('div');
             messageContent.className = 'message-content';
-            messageContent.textContent = message.content;
+            messageContent.textContent = message.content || '无内容';
             
-            // 如果不是示例留言，添加操作按钮
-            if (!isExample) {
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'message-actions';
-                
-                const editBtn = document.createElement('button');
-                editBtn.className = 'message-action-btn edit-btn';
-                editBtn.innerHTML = '<i class="fas fa-edit"></i> 编辑';
-                editBtn.addEventListener('click', function() {
-                    editMessage(message.id);
-                });
-                
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'message-action-btn delete-btn';
-                deleteBtn.innerHTML = '<i class="fas fa-trash"></i> 删除';
-                deleteBtn.addEventListener('click', function() {
-                    deleteMessage(message.id);
-                });
-                
-                actionsDiv.appendChild(editBtn);
-                actionsDiv.appendChild(deleteBtn);
-                messageDiv.appendChild(actionsDiv);
+            // 将所有元素添加到messageHeader和messageDiv
+            messageHeader.appendChild(authorSpan);
+            
+            // 添加专业信息
+            if (majorInfo) {
+                const majorSpan = document.createElement('span');
+                majorSpan.className = 'message-major';
+                majorSpan.textContent = majorInfo;
+                messageHeader.appendChild(majorSpan);
             }
             
-            messageHeader.appendChild(authorSpan);
             messageHeader.appendChild(dateSpan);
             messageDiv.appendChild(messageHeader);
             messageDiv.appendChild(messageContent);
@@ -283,137 +348,52 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 保存留言到本地存储
         const saveMessage = function(message) {
+            // 验证留言对象
+            if (!message || typeof message !== 'object') {
+                console.error('保存留言失败：无效的留言对象');
+                return null;
+            }
+            
             // 获取现有留言
             const storedMessages = localStorage.getItem('forumMessages');
             const messages = storedMessages ? JSON.parse(storedMessages) : [];
             
+            // 确保messages是数组
+            if (!Array.isArray(messages)) {
+                console.error('本地存储数据格式错误，重置为数组');
+                messages = [];
+            }
+            
+            // 为留言对象创建副本，避免直接修改传入的对象
+            const newMessage = {...message};
+            
             // 添加ID和时间戳
-            message.id = generateId();
-            message.timestamp = new Date().toISOString();
+            newMessage.id = generateId();
+            newMessage.timestamp = new Date().toISOString();
             
             // 添加新留言
-            messages.unshift(message); // 添加到开头
+            messages.unshift(newMessage); // 添加到开头
             
             // 最多保存指定数量的留言
             if (messages.length > config.maxMessages) {
                 messages.splice(config.maxMessages);
             }
             
-            // 保存回本地存储
-            localStorage.setItem('forumMessages', JSON.stringify(messages));
-            
-            // 重新加载留言
-            loadMessages();
-            
-            return message.id;
-        };
-        
-        // 更新留言
-        const updateMessage = function(id, updatedContent) {
-            // 获取现有留言
-            const storedMessages = localStorage.getItem('forumMessages');
-            const messages = storedMessages ? JSON.parse(storedMessages) : [];
-            
-            // 查找并更新留言
-            const messageIndex = messages.findIndex(m => m.id === id);
-            if (messageIndex !== -1) {
-                messages[messageIndex].content = updatedContent;
-                messages[messageIndex].timestamp = new Date().toISOString(); // 更新时间戳
-                
+            try {
                 // 保存回本地存储
                 localStorage.setItem('forumMessages', JSON.stringify(messages));
                 
                 // 重新加载留言
                 loadMessages();
                 
-                return true;
-            }
-            
-            return false;
-        };
-        
-        // 删除留言
-        const deleteMessage = function(id) {
-            if (confirm('确定要删除这条留言吗？')) {
-                // 获取现有留言
-                const storedMessages = localStorage.getItem('forumMessages');
-                const messages = storedMessages ? JSON.parse(storedMessages) : [];
-                
-                // 过滤掉要删除的留言
-                const filteredMessages = messages.filter(m => m.id !== id);
-                
-                // 保存回本地存储
-                localStorage.setItem('forumMessages', JSON.stringify(filteredMessages));
-                
-                // 重新加载留言
-                loadMessages();
+                return newMessage.id;
+            } catch (error) {
+                console.error('保存留言到本地存储失败：', error);
+                return null;
             }
         };
         
-        // 编辑留言
-        const editMessage = function(id) {
-            // 获取现有留言
-            const storedMessages = localStorage.getItem('forumMessages');
-            const messages = storedMessages ? JSON.parse(storedMessages) : [];
-            
-            // 查找留言
-            const message = messages.find(m => m.id === id);
-            if (!message) return;
-            
-            // 创建编辑模态框
-            const modal = document.createElement('div');
-            modal.className = 'edit-modal';
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3>编辑留言</h3>
-                        <span class="close-modal">&times;</span>
-                    </div>
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label>留言内容</label>
-                            <textarea id="edit-message-content" rows="4">${message.content}</textarea>
-                        </div>
-                        <div class="modal-actions">
-                            <button class="btn-primary" id="save-edit-btn">保存</button>
-                            <button class="btn-secondary" id="cancel-edit-btn">取消</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            
-            // 显示模态框
-            modal.style.display = 'flex';
-            
-            // 关闭按钮事件
-            modal.querySelector('.close-modal').addEventListener('click', function() {
-                modal.remove();
-            });
-            
-            // 取消按钮事件
-            modal.querySelector('#cancel-edit-btn').addEventListener('click', function() {
-                modal.remove();
-            });
-            
-            // 保存按钮事件
-            modal.querySelector('#save-edit-btn').addEventListener('click', function() {
-                const newContent = modal.querySelector('#edit-message-content').value.trim();
-                if (newContent) {
-                    updateMessage(id, newContent);
-                    modal.remove();
-                } else {
-                    alert('留言内容不能为空');
-                }
-            });
-            
-            // 点击模态框外部关闭
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    modal.remove();
-                }
-            });
-        };
+
         
         // 渲染分页控件
         const renderPagination = function(messages) {
@@ -427,6 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // 计算总页数
+            const config = window.forumConfig || { messagesPerPage: 5 };
             const totalPages = Math.ceil(messages.length / config.messagesPerPage);
             
             // 如果只有一页，不需要分页
@@ -440,10 +421,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const prevBtn = document.createElement('button');
             prevBtn.className = 'pagination-btn prev-btn';
             prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i> 上一页';
-            prevBtn.disabled = currentPage === 1;
+            prevBtn.disabled = window.forumCurrentPage === 1;
             prevBtn.addEventListener('click', function() {
-                if (currentPage > 1) {
-                    currentPage--;
+                if (window.forumCurrentPage > 1) {
+                    window.forumCurrentPage--;
                     showCurrentPageMessages(messages);
                     renderPagination(messages);
                 }
@@ -455,6 +436,7 @@ document.addEventListener('DOMContentLoaded', function() {
             pageNumbers.className = 'page-numbers';
             
             // 计算显示的页码范围
+            let currentPage = window.forumCurrentPage || 1;
             let startPage = Math.max(1, currentPage - 2);
             let endPage = Math.min(totalPages, startPage + 4);
             
@@ -501,10 +483,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const nextBtn = document.createElement('button');
             nextBtn.className = 'pagination-btn next-btn';
             nextBtn.innerHTML = '下一页 <i class="fas fa-chevron-right"></i>';
-            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.disabled = window.forumCurrentPage === totalPages;
             nextBtn.addEventListener('click', function() {
-                if (currentPage < totalPages) {
-                    currentPage++;
+                if (window.forumCurrentPage < totalPages) {
+                    window.forumCurrentPage++;
                     showCurrentPageMessages(messages);
                     renderPagination(messages);
                 }
@@ -518,10 +500,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // 创建页码按钮
         const createPageButton = function(pageNum, messages) {
             const pageBtn = document.createElement('button');
-            pageBtn.className = 'pagination-btn page-btn' + (pageNum === currentPage ? ' active' : '');
+            pageBtn.className = 'pagination-btn page-btn' + (pageNum === window.forumCurrentPage ? ' active' : '');
             pageBtn.textContent = pageNum;
             pageBtn.addEventListener('click', function() {
-                currentPage = pageNum;
+                window.forumCurrentPage = pageNum;
                 showCurrentPageMessages(messages);
                 renderPagination(messages);
             });
@@ -531,37 +513,63 @@ document.addEventListener('DOMContentLoaded', function() {
         // 显示当前页的留言
         const showCurrentPageMessages = function(messages) {
             const messagesContainer = document.querySelector('.forum-messages');
-            if (!messagesContainer) return;
+            if (!messagesContainer) {
+                console.error('找不到留言容器元素');
+                return;
+            }
             
-            // 获取留言标题元素
-            const messagesHeading = messagesContainer.querySelector('h3');
+            // 获取留言标题元素，如果没有则使用容器作为插入点
+            let messagesHeading = messagesContainer.querySelector('h3');
+            let insertPoint = messagesContainer.firstChild;
             
-            // 移除所有非示例留言
-            const existingMessages = messagesContainer.querySelectorAll('.message-item:not(.example-message)');
+            // 移除所有现有留言（包括示例留言和之前加载的留言）
+            const existingMessages = messagesContainer.querySelectorAll('.message-item');
             existingMessages.forEach(message => {
                 message.remove();
             });
             
-            // 计算当前页的留言范围
-            const startIndex = (currentPage - 1) * config.messagesPerPage;
-            const endIndex = Math.min(startIndex + config.messagesPerPage, messages.length);
-            const currentPageMessages = messages.slice(startIndex, endIndex);
+            // 移除空状态提示
+            const emptyState = messagesContainer.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+            
+            // 计算当前页的留言范围 - 使用配置中的每页留言数
+              const pageSize = window.forumConfig?.messagesPerPage || 5;
+              const currentPage = window.forumCurrentPage || 1;
+              const startIndex = (currentPage - 1) * pageSize;
+              const endIndex = Math.min(startIndex + pageSize, messages.length);
+              const currentPageMessages = messages.slice(startIndex, endIndex);
             
             // 添加当前页的留言
-            currentPageMessages.forEach(message => {
-                const messageElement = createMessageElement(message);
-                messagesContainer.insertBefore(messageElement, messagesHeading.nextSibling);
-            });
-            
-            // 如果没有留言，显示空状态
-            if (messages.length === 0) {
-                const emptyState = document.createElement('div');
-                emptyState.className = 'empty-state';
-                emptyState.innerHTML = `
-                    <i class="fas fa-comments-slash"></i>
-                    <p>暂无留言，快来发表第一条留言吧！</p>
+            if (currentPageMessages.length > 0) {
+                currentPageMessages.forEach(message => {
+                    const messageElement = createMessageElement(message);
+                    if (messagesHeading) {
+                        messagesContainer.insertBefore(messageElement, messagesHeading.nextSibling);
+                    } else {
+                        messagesContainer.appendChild(messageElement);
+                    }
+                });
+            } else {
+                // 如果当前页没有留言，显示提示
+                const noMessages = document.createElement('div');
+                noMessages.className = 'empty-state';
+                noMessages.innerHTML = `
+                    <i class="fas fa-info-circle"></i>
+                    <p>当前页暂无留言</p>
                 `;
-                messagesContainer.insertBefore(emptyState, messagesHeading.nextSibling);
+                if (messagesHeading) {
+                    messagesContainer.insertBefore(noMessages, messagesHeading.nextSibling);
+                } else {
+                    messagesContainer.appendChild(noMessages);
+                }
+            }
+            
+            // 隐藏占位符提示
+            const placeholderNotice = document.querySelector('.placeholder-notice');
+            if (placeholderNotice) {
+                placeholderNotice.style.display = 'none';
             }
         };
         
@@ -599,8 +607,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 添加表单验证功能
         const addFormValidation = function() {
-            const contactForm = document.getElementById('contact-form');
-            if (!contactForm) return;
+            const messageForm = document.getElementById('messageForm');
+            if (!messageForm) return;
             
             // 移除原有的placeholder-notice
             const placeholderNotice = document.querySelector('.placeholder-notice');
@@ -609,7 +617,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // 添加表单验证
-            contactForm.addEventListener('submit', function(e) {
+            messageForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
                 // 移除所有错误提示
@@ -617,8 +625,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // 获取表单数据
                 const name = document.getElementById('name').value.trim();
-                const email = document.getElementById('email').value.trim();
-                const message = document.getElementById('message').value.trim();
+                const studentId = document.getElementById('studentId').value.trim();
+                const major = document.getElementById('major').value.trim();
+                const className = document.getElementById('class').value.trim();
+                const content = document.getElementById('content').value.trim();
                 
                 let isValid = true;
                 
@@ -631,37 +641,64 @@ document.addEventListener('DOMContentLoaded', function() {
                     isValid = false;
                 }
                 
-                // 验证邮箱
-                if (!email) {
-                    showError('email', '请输入您的邮箱地址');
+                // 验证学号
+                if (!studentId) {
+                    showError('studentId', '请输入您的学号');
                     isValid = false;
-                } else {
-                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                    if (!emailRegex.test(email)) {
-                        showError('email', '请输入有效的邮箱地址');
-                        isValid = false;
-                    }
+                } else if (studentId.length > 20) {
+                    showError('studentId', '学号不能超过20个字符');
+                    isValid = false;
+                }
+                
+                // 验证专业
+                if (!major) {
+                    showError('major', '请输入您的专业');
+                    isValid = false;
+                } else if (major.length > 20) {
+                    showError('major', '专业名称不能超过20个字符');
+                    isValid = false;
+                }
+                
+                // 验证班级
+                if (!className) {
+                    showError('class', '请输入您的班级');
+                    isValid = false;
+                } else if (className.length > 20) {
+                    showError('class', '班级名称不能超过20个字符');
+                    isValid = false;
                 }
                 
                 // 验证留言内容
-                if (!message) {
-                    showError('message', '请输入您的留言内容');
+                if (!content) {
+                    showError('content', '请输入您的留言内容');
                     isValid = false;
-                } else if (message.length < 5) {
-                    showError('message', '留言内容至少需要5个字符');
-                    isValid = false;
-                } else if (message.length > 500) {
-                    showError('message', '留言内容不能超过500个字符');
+                } else if (content.length > 500) {
+                    showError('content', '留言内容不能超过500个字符');
                     isValid = false;
                 }
                 
                 // 如果验证通过，提交表单
                 if (isValid) {
+                    // 格式化为示例中的显示格式：姓名 - 班级
+                    const displayName = `${name} - ${className}`;
+                    
                     const newMessage = {
-                        name: name,
-                        email: email,
-                        content: message
-                    };
+                        name: displayName,
+                        studentId: studentId,
+                        major: major,
+                        className: className,
+                        content: content
+                    };","},{"old_str":"                    // 成功提示
+                    const successMessage = document.createElement('div');
+                    successMessage.className = 'success-message';
+                    successMessage.textContent = '感谢您的留言！';
+                    contactForm.prepend(successMessage);","new_str":"                    // 成功提示
+                    const successMessage = document.createElement('div');
+                    successMessage.className = 'success-message';
+                    successMessage.textContent = '感谢您的留言！';
+                    messageForm.prepend(successMessage);"},{"old_str":"                    // 重置表单
+                    contactForm.reset();","new_str":"                    // 重置表单
+                    messageForm.reset();"},{"old_str":
                     
                     // 保存留言
                     saveMessage(newMessage);
@@ -670,7 +707,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const successMessage = document.createElement('div');
                     successMessage.className = 'success-message';
                     successMessage.textContent = '感谢您的留言！';
-                    contactForm.prepend(successMessage);
+                    messageForm.prepend(successMessage);
                     
                     // 5秒后移除成功提示
                     setTimeout(() => {
@@ -678,7 +715,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }, 5000);
                     
                     // 重置表单
-                    contactForm.reset();
+                    messageForm.reset();
                 }
             });
             
@@ -704,7 +741,7 @@ document.addEventListener('DOMContentLoaded', function() {
             };
             
             // 添加表单输入监听，实时验证
-            contactForm.querySelectorAll('input, textarea').forEach(input => {
+            messageForm.querySelectorAll('input, textarea').forEach(input => {
                 input.addEventListener('blur', function() {
                     // 只验证非空字段
                     if (this.value.trim()) {
@@ -814,6 +851,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 /* 留言样式 */
                 .forum-messages {
                     margin-top: 40px;
+                }
+                
+                /* 专业信息样式 */
+                .message-major {
+                    font-size: 12px;
+                    color: #666;
+                    margin-left: 10px;
+                    font-style: italic;
                 }
                 
                 .message-item {
@@ -1098,79 +1143,21 @@ document.addEventListener('DOMContentLoaded', function() {
         // 初始化
         addFormValidation();
         addStyles();
-        loadMessages();
         
-        // 返回保存留言的函数，供表单提交使用
-        return saveMessage;
-    };
-    
-    // 初始化论坛功能并获取保存留言的函数
-    const saveMessage = initializeForum();
-    
-    // 3. 表单验证和提交处理
-    const contactForm = document.getElementById('contact-form');
-    
-    if (contactForm) {
-        contactForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // 简单的表单验证
-            const name = document.getElementById('name').value;
-            const email = document.getElementById('email').value;
-            const message = document.getElementById('message').value;
-            
-            if (!name || !email || !message) {
-                alert('请填写所有必填字段');
-                return;
-            }
-            
-            // 检查邮箱格式
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                alert('请输入有效的邮箱地址');
-                return;
-            }
-            
-            // 4. 论坛留言的本地存储功能
-            const currentDate = new Date();
-            const formattedDate = currentDate.getFullYear() + '-' + 
-                                  String(currentDate.getMonth() + 1).padStart(2, '0') + '-' + 
-                                  String(currentDate.getDate()).padStart(2, '0');
-            
-            const newMessage = {
-                name: name,
-                email: email,
-                content: message,
-                date: formattedDate
-            };
-            
-            // 保存留言
-            saveMessage(newMessage);
-            
-            // 重新加载留言显示
-            const messagesContainer = document.querySelector('.forum-messages');
-            if (messagesContainer) {
-                // 移除所有非示例留言
-                const existingMessages = messagesContainer.querySelectorAll('.message-item');
-                existingMessages.forEach((msg, index) => {
-                    if (index >= 5) {
-                        msg.remove();
-                    }
-                });
-                
-                // 重新初始化论坛以显示新留言
-                initializeForum();
-            }
-            
-            // 成功提示
-            alert('感谢您的留言！您的留言已保存到本地。');
-            contactForm.reset();
-        });
-    }
+        // 确保DOM加载完成后再加载留言
+        if (document.readyState === 'complete' || document.readyState !== 'loading') {
+            setTimeout(loadMessages, 100);
+        } else {
+            document.addEventListener('DOMContentLoaded', function() {
+                loadMessages();
+            });
+        }
+        
+
     
     // 添加元素进入视口时的动画效果
     const animateOnScroll = function() {
-        const elements = document.querySelectorAll('.about-content, .objective-item, .class-item, .news-item, .message-item');
+        const elements = document.querySelectorAll('.about-content, .objective-item, .class-item, .news-item');
         
         elements.forEach(element => {
             const elementPosition = element.getBoundingClientRect().top;
@@ -1184,7 +1171,7 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     // 设置初始动画状态
-    document.querySelectorAll('.about-content, .objective-item, .class-item, .news-item, .message-item').forEach(element => {
+    document.querySelectorAll('.about-content, .objective-item, .class-item, .news-item').forEach(element => {
         element.style.opacity = '0';
         element.style.transform = 'translateY(20px)';
         element.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
@@ -2748,27 +2735,30 @@ document.addEventListener('DOMContentLoaded', function() {
     // 监听滚动事件
     window.addEventListener('scroll', lazyLoadImages);
     
-    // 9. 返回顶部按钮功能
-    const backToTopButton = document.createElement('button');
-    backToTopButton.className = 'back-to-top';
-    backToTopButton.innerHTML = '<i class="fas fa-arrow-up"></i>';
-    backToTopButton.style.display = 'none';
-    backToTopButton.style.position = 'fixed';
-    backToTopButton.style.bottom = '30px';
-    backToTopButton.style.right = '30px';
-    backToTopButton.style.width = '50px';
-    backToTopButton.style.height = '50px';
-    backToTopButton.style.borderRadius = '50%';
-    backToTopButton.style.backgroundColor = '#1e40af';
-    backToTopButton.style.color = '#fff';
-    backToTopButton.style.border = 'none';
-    backToTopButton.style.fontSize = '20px';
-    backToTopButton.style.cursor = 'pointer';
-    backToTopButton.style.zIndex = '999';
-    backToTopButton.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.2)';
-    backToTopButton.style.transition = 'all 0.3s ease';
-    
-    document.body.appendChild(backToTopButton);
+    // 9. 返回顶部按钮功能 - 确保只创建一个返回顶部按钮
+    let backToTopButton = document.querySelector('.back-to-top');
+    if (!backToTopButton) {
+        backToTopButton = document.createElement('button');
+        backToTopButton.className = 'back-to-top';
+        backToTopButton.innerHTML = '<i class="fas fa-arrow-up"></i>';
+        backToTopButton.style.display = 'none';
+        backToTopButton.style.position = 'fixed';
+        backToTopButton.style.bottom = '30px';
+        backToTopButton.style.right = '30px';
+        backToTopButton.style.width = '50px';
+        backToTopButton.style.height = '50px';
+        backToTopButton.style.borderRadius = '50%';
+        backToTopButton.style.backgroundColor = '#1e40af';
+        backToTopButton.style.color = '#fff';
+        backToTopButton.style.border = 'none';
+        backToTopButton.style.fontSize = '20px';
+        backToTopButton.style.cursor = 'pointer';
+        backToTopButton.style.zIndex = '999';
+        backToTopButton.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.2)';
+        backToTopButton.style.transition = 'all 0.3s ease';
+        
+        document.body.appendChild(backToTopButton);
+    }
     
     window.addEventListener('scroll', function() {
         if (window.scrollY > 300) {
@@ -2792,7 +2782,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // 微信图标点击事件 - 修复版
-    const wechatIcon = document.querySelector('.footer-social a .fa-weixin').parentElement;
+    const wechatIcon = document.querySelector('.footer-social a .fa-weixin')?.parentElement;
     if (wechatIcon) {
         wechatIcon.addEventListener('click', function(e) {
             e.preventDefault();
@@ -2801,10 +2791,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 modal.style.display = 'flex';
             } else {
                 // 如果模态框不存在，重新创建
-                createQrCodeModal();
-                const newModal = document.getElementById('wechat-modal');
-                if (newModal) {
-                    newModal.style.display = 'flex';
+                if (typeof createQrCodeModal === 'function') {
+                    createQrCodeModal();
+                    const newModal = document.getElementById('wechat-modal');
+                    if (newModal) {
+                        newModal.style.display = 'flex';
+                    }
                 }
             }
         });
@@ -2844,16 +2836,16 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     // 初始化所有功能
-    optimizeRequirementsPage();
-    addSearchFunction();
-    addDarkModeToggle();
-    addFontSizeAdjustment();
-    lazyLoadImages();
-    highlightActiveLink();
+    if (typeof optimizeRequirementsPage === 'function') optimizeRequirementsPage();
+    if (typeof addSearchFunction === 'function') addSearchFunction();
+    if (typeof addDarkModeToggle === 'function') addDarkModeToggle();
+    if (typeof addFontSizeAdjustment === 'function') addFontSizeAdjustment();
+    if (typeof lazyLoadImages === 'function') lazyLoadImages();
+    if (typeof highlightActiveLink === 'function') highlightActiveLink();
     
     // 监听滚动事件
     window.addEventListener('scroll', function() {
-        highlightActiveLink();
-        animateOnScroll();
+        if (typeof highlightActiveLink === 'function') highlightActiveLink();
+        if (typeof animateOnScroll === 'function') animateOnScroll();
     });
 });
