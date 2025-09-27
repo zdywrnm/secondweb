@@ -165,11 +165,143 @@ document.addEventListener('DOMContentLoaded', function() {
     const navLinks = document.querySelector('.nav-links');
     
     if (menuToggle && navLinks) {
-        menuToggle.addEventListener('click', function() {
+        // 菜单切换功能
+        menuToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
             navLinks.classList.toggle('active');
-            // 添加菜单切换动画类
             menuToggle.classList.toggle('active');
+            
+            // 防止背景滚动
+            if (navLinks.classList.contains('active')) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
+            }
         });
+        
+        // 点击菜单项后关闭菜单
+        navLinks.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A') {
+                navLinks.classList.remove('active');
+                menuToggle.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+        
+        // 点击菜单外部关闭菜单
+        document.addEventListener('click', function(e) {
+            if (!menuToggle.contains(e.target) && !navLinks.contains(e.target)) {
+                navLinks.classList.remove('active');
+                menuToggle.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+        
+        // 窗口大小改变时关闭菜单
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                navLinks.classList.remove('active');
+                menuToggle.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+        
+        // 滚动时关闭菜单
+        window.addEventListener('scroll', function() {
+            if (navLinks.classList.contains('active')) {
+                navLinks.classList.remove('active');
+                menuToggle.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+    }
+    
+    // 移动端触摸优化
+    if ('ontouchstart' in window) {
+        // 添加触摸反馈
+        document.addEventListener('touchstart', function(e) {
+            if (e.target.classList.contains('btn') || 
+                e.target.classList.contains('btn-primary') || 
+                e.target.classList.contains('btn-submit') ||
+                e.target.classList.contains('btn-secondary') ||
+                e.target.classList.contains('unified-card') ||
+                e.target.classList.contains('info-card') ||
+                e.target.classList.contains('news-item') ||
+                e.target.classList.contains('objective-item')) {
+                e.target.style.transform = 'scale(0.98)';
+            }
+        });
+        
+        document.addEventListener('touchend', function(e) {
+            if (e.target.classList.contains('btn') || 
+                e.target.classList.contains('btn-primary') || 
+                e.target.classList.contains('btn-submit') ||
+                e.target.classList.contains('btn-secondary') ||
+                e.target.classList.contains('unified-card') ||
+                e.target.classList.contains('info-card') ||
+                e.target.classList.contains('news-item') ||
+                e.target.classList.contains('objective-item')) {
+                setTimeout(() => {
+                    e.target.style.transform = '';
+                }, 150);
+            }
+        });
+        
+        // 防止双击缩放
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(e) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+    }
+    
+    // 移动端性能优化
+    if (window.innerWidth <= 768) {
+        // 减少动画复杂度
+        const style = document.createElement('style');
+        style.textContent = `
+            @media (max-width: 768px) {
+                * {
+                    animation-duration: 0.3s !important;
+                    transition-duration: 0.3s !important;
+                }
+                
+                .unified-card:hover,
+                .info-card:hover,
+                .news-item:hover,
+                .objective-item:hover {
+                    transform: none !important;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // 延迟加载非关键资源
+        const lazyLoadImages = function() {
+            const images = document.querySelectorAll('img[data-src]');
+            const imageObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        img.src = img.dataset.src;
+                        img.classList.remove('lazy');
+                        imageObserver.unobserve(img);
+                    }
+                });
+            });
+            
+            images.forEach(img => imageObserver.observe(img));
+        };
+        
+        // 页面加载完成后执行延迟加载
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', lazyLoadImages);
+        } else {
+            lazyLoadImages();
+        }
     }
     
     // 滚动效果 - 导航栏样式变化
